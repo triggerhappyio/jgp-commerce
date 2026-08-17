@@ -58,7 +58,7 @@ export const products: Product[] = [
     category: "Golf",
     gender: "Women's",
     description:
-      "Performance golf build with the same posture-correcting foundation as the rest of the line.",
+      "Performance golf build with the same posture-conscious foundation as the rest of the line.",
     image: "/products/w350.jpg"
   },
   {
@@ -76,7 +76,7 @@ export const products: Product[] = [
     price: 380,
     category: "Loafer",
     gender: "Men's",
-    description: "Classic leather loafer construction with posture-correcting internal geometry.",
+    description: "Classic leather loafer construction with posture-conscious internal geometry.",
     image: "/products/m455a.jpg"
   },
   {

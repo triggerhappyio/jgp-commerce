@@ -29,7 +29,12 @@ export default function Footer() {
           </p>
         </div>
       </div>
-      <div className="container" style={{ marginTop: 48, opacity: 0.6, fontSize: 13 }}>
+      <div className="container" style={{ marginTop: 24, opacity: 0.6, fontSize: 12, maxWidth: 720 }}>
+        JGP footwear is designed for everyday comfort and support. It is not a medical device and is
+        not intended to diagnose, treat, cure, or prevent any condition. For medical concerns,
+        consult a healthcare professional.
+      </div>
+      <div className="container" style={{ marginTop: 16, opacity: 0.6, fontSize: 13 }}>
         © {new Date().getFullYear()} JGP USA · All rights reserved.
       </div>
     </footer>

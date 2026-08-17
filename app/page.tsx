@@ -11,8 +11,8 @@ export default function Home() {
           <div className="eyebrow" style={{ color: "var(--brass)" }}>Premium Supportive Footwear</div>
           <h1 style={{ color: "var(--white)", maxWidth: 720 }}>Body Alignment. K-Shoe, JGP.</h1>
           <p style={{ color: "rgba(245,242,236,0.8)", maxWidth: 480, fontSize: 17 }}>
-            Certified health tools, not just shoes — restoring posture, reducing pain and fatigue, and
-            reviving your natural alignment. Backed by 20,000+ cases.
+            More than shoes — footwear engineered with biomechanics-informed design to support better
+            posture and help you feel steadier, step after step. Trusted by 20,000+ customers.
           </p>
           <div style={{ display: "flex", gap: 16, marginTop: 32 }}>
             <Link href="/shop" className="btn btn-brass">Shop the Revolution →</Link>
@@ -26,32 +26,33 @@ export default function Home() {
       {/* Hidden culprit */}
       <section className="section">
         <div className="container" style={{ maxWidth: 720 }}>
-          <div className="eyebrow">The Hidden Culprit</div>
+          <div className="eyebrow">Why Shoes Matter More Than You Think</div>
           <h2>Think it's just fatigue? Look at your shoes.</h2>
           <p>
-            Heavy legs, a stiff lower back, and constant exhaustion aren't just part of getting older.
-            They're the direct result of your brain fighting to keep you balanced on overly soft,
-            unstable shoes. Your body is overworking, and your footwear is the hidden culprit.
+            Heavy legs, a stiff lower back, and end-of-day exhaustion aren't only about getting older.
+            Soft, unstable footwear can make your body work harder just to stay balanced — and over a
+            long day, that adds up. Your shoes might be working against you.
           </p>
           <Link href="/the-truth" className="btn btn-ghost" style={{ marginTop: 12 }}>
-            Discover the Hidden Cause →
+            Discover Why It Matters →
           </Link>
         </div>
       </section>
 
-      {/* Clinical proof */}
+      {/* Design philosophy */}
       <section className="section-tight" style={{ background: "var(--white)" }}>
         <div className="container">
-          <div className="eyebrow">Clinically Validated</div>
-          <h2>The science is clear. The results are proven.</h2>
+          <div className="eyebrow">Biomechanics-Informed Design</div>
+          <h2>Designed with support and stability in mind.</h2>
           <p style={{ maxWidth: 560, marginBottom: 40 }}>
-            Clinically validated by Chonnam National University Biomechanics Lab.
+            Developed in consultation with biomechanics research from Chonnam National University —
+            because good design should be grounded in how the body actually moves.
           </p>
           <div className="grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
             {[
-              { stat: "+3.4 in", label: "Stride Length Increased", sub: "Dynamic walking efficiency" },
-              { stat: "+5.0%", label: "Core Strength Enhanced", sub: "Maximized kinetic power transfer" },
-              { stat: "Alignment", label: "Posture Corrected", sub: "Reduced forward head posture" }
+              { stat: "Stride", label: "Efficiency-Focused Design", sub: "Built to support a more natural, efficient step" },
+              { stat: "Core", label: "Stability-Conscious Build", sub: "Encourages engagement through a stable base" },
+              { stat: "Posture", label: "Alignment-Aware Construction", sub: "Designed with posture and balance in mind" }
             ].map((s) => (
               <div key={s.label} className="card" style={{ padding: 28 }}>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: 34, color: "var(--brass)" }}>
@@ -63,7 +64,7 @@ export default function Home() {
             ))}
           </div>
           <Link href="/the-science" className="btn btn-ghost" style={{ marginTop: 32 }}>
-            See the Clinical Proof →
+            See the Design Philosophy →
           </Link>
         </div>
       </section>
@@ -92,8 +93,8 @@ export default function Home() {
         <div className="container">
           <h2 style={{ color: "var(--white)" }}>Tucson, step into true comfort.</h2>
           <p style={{ color: "rgba(245,242,236,0.8)", maxWidth: 520 }}>
-            Visit our Tucson location for a free footprint analysis and experience the 10-second balance
-            miracle for yourself.
+            Visit our Tucson location for a free footprint analysis and experience our 10-second
+            in-store balance check for yourself.
           </p>
           <p style={{ color: "var(--bone)", marginTop: 16 }}>6458 N Oracle Rd, Tucson, AZ 85704</p>
           <a

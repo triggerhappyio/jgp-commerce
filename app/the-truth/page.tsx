@@ -4,17 +4,21 @@ export default function TheTruthPage() {
   return (
     <main className="section">
       <div className="container" style={{ maxWidth: 720 }}>
-        <div className="eyebrow">The Hidden Culprit</div>
+        <div className="eyebrow">Why Shoes Matter More Than You Think</div>
         <h1>Think it's just fatigue? Look at your shoes.</h1>
         <p>
-          Heavy legs, a stiff lower back, and constant exhaustion aren't just part of getting older.
-          They're the direct result of your brain fighting to keep you balanced on overly soft,
-          unstable shoes. Your body is overworking, and your footwear is the hidden culprit.
+          Heavy legs, a stiff lower back, and end-of-day exhaustion aren't only about getting older.
+          Soft, unstable footwear can make your body work harder just to stay balanced — and over a
+          long day, that adds up. Your shoes might be working against you.
         </p>
         <p>
-          Most modern shoes prioritize softness over stability. That softness forces your
-          stabilizing muscles to work overtime with every step, which shows up later as fatigue,
-          tension, and pain that seems to come from nowhere.
+          Many modern shoes prioritize softness over stability. That extra softness can mean your
+          stabilizing muscles do more work with every step — which, for some people, shows up as
+          added fatigue or tension by the end of the day.
+        </p>
+        <p style={{ fontSize: 13, color: "var(--steel)", marginTop: 24 }}>
+          This is general information about footwear design, not medical advice. If you're
+          experiencing persistent pain, talk to a healthcare professional.
         </p>
       </div>
     </main>
