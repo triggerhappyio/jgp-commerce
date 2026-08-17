@@ -81,7 +81,7 @@ model Consultation {
   name        String
   email       String
   phone       String?
-  location    String   @default("Tucson")
+  location    String   @default("los-angeles")
   preferredAt DateTime?
   notes       String?
   status      String   @default("new") // new | contacted | scheduled | completed | canceled

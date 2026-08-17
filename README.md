@@ -42,7 +42,7 @@ For Stripe webhooks locally: `stripe listen --forward-to localhost:3000/api/webh
   target data model; the storefront currently reads products from the
   static `lib/products.ts` file as a bridge until catalog migration (below)
   is done.
-- Consultation ("Tucson Balance Check") lead form, saved to Postgres.
+- Consultation ("Balance Check") lead form, saved to Postgres.
 
 ## Migration order (do these in sequence)
 

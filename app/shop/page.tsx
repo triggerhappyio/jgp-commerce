@@ -8,7 +8,7 @@ export default function ShopPage() {
     <main className="section">
       <div className="container">
         <div className="eyebrow">The Collection</div>
-        <h1 style={{ fontSize: 40 }}>Every pair is a certified health tool.</h1>
+        <h1 style={{ fontSize: 40 }}>Every pair is built for support.</h1>
         <div className="grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginTop: 32 }}>
           {products.map((p) => (
             <Link key={p.slug} href={`/shop/${p.slug}`} className="card">

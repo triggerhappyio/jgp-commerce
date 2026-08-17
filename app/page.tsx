@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { products } from "@/lib/products";
+import { locations } from "@/lib/locations";
 
 export default function Home() {
   const featured = products.slice(0, 4);
@@ -16,8 +17,8 @@ export default function Home() {
           </p>
           <div style={{ display: "flex", gap: 16, marginTop: 32 }}>
             <Link href="/shop" className="btn btn-brass">Shop the Revolution →</Link>
-            <Link href="#tucson" className="btn" style={{ borderColor: "var(--bone)", color: "var(--white)" }}>
-              Visit Tucson Store
+            <Link href="#locations" className="btn" style={{ borderColor: "var(--bone)", color: "var(--white)" }}>
+              Visit Our Stores
             </Link>
           </div>
         </div>
@@ -88,24 +89,31 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Tucson store */}
-      <section id="tucson" className="section-tight" style={{ background: "var(--ink)", color: "var(--white)" }}>
+      {/* Store locations */}
+      <section id="locations" className="section-tight" style={{ background: "var(--ink)", color: "var(--white)" }}>
         <div className="container">
-          <h2 style={{ color: "var(--white)" }}>Tucson, step into true comfort.</h2>
+          <h2 style={{ color: "var(--white)" }}>Step into true comfort.</h2>
           <p style={{ color: "rgba(245,242,236,0.8)", maxWidth: 520 }}>
-            Visit our Tucson location for a free footprint analysis and experience our 10-second
+            Visit one of our stores for a free footprint analysis and experience our 10-second
             in-store balance check for yourself.
           </p>
-          <p style={{ color: "var(--bone)", marginTop: 16 }}>6458 N Oracle Rd, Tucson, AZ 85704</p>
-          <a
-            className="btn btn-brass"
-            style={{ marginTop: 8 }}
-            href="https://www.google.com/maps/dir/?api=1&destination=6458%20N%20Oracle%20Rd%2C%20Tucson%2C%20AZ%2085704"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Get Directions
-          </a>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(2, 1fr)", marginTop: 24, gap: 24 }}>
+            {locations.map((loc) => (
+              <div key={loc.id}>
+                <div style={{ fontWeight: 600, color: "var(--brass)" }}>{loc.name}</div>
+                <p style={{ color: "var(--bone)", marginTop: 8 }}>{loc.address}</p>
+                <a
+                  className="btn btn-brass"
+                  style={{ marginTop: 8 }}
+                  href={loc.mapsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Get Directions
+                </a>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     </main>

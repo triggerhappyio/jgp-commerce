@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { locations } from "@/lib/locations";
 
 export default function Footer() {
   return (
@@ -22,11 +23,13 @@ export default function Footer() {
         </div>
         <div>
           <div className="eyebrow" style={{ color: "var(--brass)" }}>Visit Us</div>
-          <p style={{ color: "var(--bone)", opacity: 0.75, marginTop: 12 }}>
-            6458 N Oracle Rd, Tucson, AZ 85704
-            <br />
-            (520) 488-8824
-          </p>
+          {locations.map((loc) => (
+            <p key={loc.id} style={{ color: "var(--bone)", opacity: 0.75, marginTop: 12 }}>
+              <strong>{loc.name}</strong>
+              <br />
+              {loc.address}
+            </p>
+          ))}
         </div>
       </div>
       <div className="container" style={{ marginTop: 24, opacity: 0.6, fontSize: 12, maxWidth: 720 }}>
