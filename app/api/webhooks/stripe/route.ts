@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { getProduct } from "@/lib/products";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2024-06-20"
@@ -51,25 +50,46 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // NOTE: this writes against the static catalog in lib/products.ts as a
-    // bridge. Once products are migrated into Postgres (see README), swap
-    // this for real ProductVariant lookups by SKU and decrement inventoryQty
-    // transactionally here.
-    await prisma.order.create({
-      data: {
-        customerId: customer?.id,
-        stripeSessionId: session.id,
-        stripePaymentIntentId:
-          typeof session.payment_intent === "string" ? session.payment_intent : undefined,
-        status: "paid",
-        totalCents: session.amount_total ?? 0,
-        shippingAddress: (session.shipping_details as any) ?? undefined
+    // The order, its line items, and the inventory decrement all happen in
+    // one transaction — either the whole paid order lands consistently, or
+    // none of it does.
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          customerId: customer?.id,
+          stripeSessionId: session.id,
+          stripePaymentIntentId:
+            typeof session.payment_intent === "string" ? session.payment_intent : undefined,
+          status: "paid",
+          totalCents: session.amount_total ?? 0,
+          shippingAddress: (session.shipping_details as any) ?? undefined
+        }
+      });
+
+      for (const item of items) {
+        // Cart items are keyed by product slug, which doubles as sku until
+        // the real Shopify SKUs are migrated in (see prisma/seed.ts).
+        const variant = await tx.productVariant.findUnique({ where: { sku: item.slug } });
+        if (!variant) {
+          // Payment already succeeded — never drop the order over a missing
+          // catalog row. Log it so the mismatch gets caught and fixed.
+          console.error(`No ProductVariant for sku "${item.slug}" (order ${order.id})`);
+          continue;
+        }
+        await tx.orderItem.create({
+          data: {
+            orderId: order.id,
+            productVariantId: variant.id,
+            quantity: item.qty,
+            unitPriceCents: variant.priceCents
+          }
+        });
+        await tx.productVariant.update({
+          where: { id: variant.id },
+          data: { inventoryQty: { decrement: item.qty } }
+        });
       }
     });
-
-    // TODO once catalog lives in Postgres: create OrderItem rows here and
-    // decrement ProductVariant.inventoryQty inside the same transaction.
-    void items.map((i) => getProduct(i.slug));
   }
 
   return NextResponse.json({ received: true });

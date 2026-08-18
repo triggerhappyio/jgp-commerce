@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getProduct } from "@/lib/products";
+import { prisma } from "@/lib/prisma";
 
 // Requires STRIPE_SECRET_KEY in your environment (test key while developing,
 // live key only once you've gone through Stripe's account activation).
@@ -15,6 +15,15 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+  if (!process.env.DATABASE_URL) {
+    return NextResponse.json(
+      {
+        error:
+          "Catalog database is not configured yet. Add DATABASE_URL, run `npx prisma migrate dev`, then `npm run db:seed`."
+      },
+      { status: 500 }
+    );
+  }
 
   const body = await req.json();
   const items: { slug: string; qty: number }[] = body.items || [];
@@ -23,22 +32,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cart is empty." }, { status: 400 });
   }
 
-  const line_items = items.map((item) => {
-    const product = getProduct(item.slug);
-    if (!product) throw new Error(`Unknown product: ${item.slug}`);
-    return {
-      quantity: item.qty,
-      price_data: {
-        currency: "usd",
-        product_data: { name: product.name },
-        unit_amount: Math.round(product.price * 100)
-      }
-    };
-  });
-
   const origin = req.headers.get("origin") || "http://localhost:3000";
 
   try {
+    // Prices are always computed here, from the catalog — never trusted from
+    // the client cart.
+    const line_items = await Promise.all(
+      items.map(async (item) => {
+        const variant = await prisma.productVariant.findUnique({
+          where: { sku: item.slug },
+          include: { product: true }
+        });
+        if (!variant) throw new Error(`Unknown product: ${item.slug}`);
+        return {
+          quantity: item.qty,
+          price_data: {
+            currency: "usd",
+            product_data: { name: variant.product.name },
+            unit_amount: variant.priceCents
+          }
+        };
+      })
+    );
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
