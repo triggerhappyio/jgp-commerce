@@ -1,6 +1,14 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { updateProductDetails, updateProductStatus, addVariant, toggleVariantActive } from "@/lib/actions/products";
+import {
+  updateProductDetails,
+  updateProductStatus,
+  addVariant,
+  toggleVariantActive,
+  removeProductImage,
+  moveProductImageUp
+} from "@/lib/actions/products";
+import ProductImageUploader from "@/components/ProductImageUploader";
 import { ProductStatus } from "@prisma/client";
 
 export const revalidate = 0;
@@ -9,7 +17,10 @@ export default async function AdminProductDetailPage({ params }: { params: Promi
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { variants: { include: { inventoryLevels: true }, orderBy: [{ color: "asc" }, { size: "asc" }] } }
+    include: {
+      variants: { include: { inventoryLevels: true }, orderBy: [{ color: "asc" }, { size: "asc" }] },
+      images: { orderBy: { position: "asc" } }
+    }
   });
   if (!product) return notFound();
 
@@ -66,6 +77,36 @@ export default async function AdminProductDetailPage({ params }: { params: Promi
           Save Details
         </button>
       </form>
+
+      <div className="card" style={{ padding: 20, marginTop: 20 }}>
+        <div style={{ fontWeight: 600, marginBottom: 12 }}>Images</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+          {product.images.map((img, i) => (
+            <div key={img.id} style={{ width: 120 }}>
+              {/* Admin-only thumbnail from trusted, staff-uploaded storage — not
+                  the customer-facing storefront, so next/image's build-time
+                  domain allowlisting isn't worth the friction here. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={img.url} alt={img.alt || product.name} style={{ width: 120, height: 120, objectFit: "cover", borderRadius: 4 }} />
+              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                {i > 0 && (
+                  <form action={moveProductImageUp.bind(null, img.id, product.id)}>
+                    <button className="btn btn-ghost" type="submit" style={{ fontSize: 11, padding: "2px 6px" }}>
+                      ↑
+                    </button>
+                  </form>
+                )}
+                <form action={removeProductImage.bind(null, img.id, product.id)}>
+                  <button className="btn btn-ghost" type="submit" style={{ fontSize: 11, padding: "2px 6px", color: "#b3261e" }}>
+                    Remove
+                  </button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </div>
+        <ProductImageUploader productId={product.id} />
+      </div>
 
       <div className="card" style={{ padding: 20, marginTop: 20 }}>
         <div style={{ fontWeight: 600, marginBottom: 12 }}>Variants</div>

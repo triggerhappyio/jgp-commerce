@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { checkRateLimit, clientKeyFrom } from "@/lib/rate-limit";
+import { checkRateLimit, clientKeyFrom, assertRateLimiterConfigured } from "@/lib/rate-limit";
+import { sendEmail, accountVerificationEmail } from "@/lib/email";
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(req: NextRequest) {
-  const rateLimit = checkRateLimit(clientKeyFrom(req, "register"), 5, 60 * 60 * 1000); // 5/hour/IP
+  assertRateLimiterConfigured();
+  const rateLimit = await checkRateLimit(clientKeyFrom(req, "register"), 5, 60 * 60 * 1000, "register"); // 5/hour/IP
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -63,18 +65,21 @@ export async function POST(req: NextRequest) {
 
     const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/auth/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
-    // No email provider is wired in yet (see lib/email.ts / README) — this
-    // does NOT pretend to have sent anything. In development the link is
-    // logged so the flow is actually testable; in production this needs a
-    // real transactional-email send wired in before guest-order claiming
-    // can work end-to-end. Until then, existing guest history simply stays
-    // unclaimed rather than being handed out on an unverified email.
+    // Always logged in development regardless of email outcome, so the
+    // claim flow stays testable without a real provider configured.
     if (process.env.NODE_ENV !== "production") {
       console.log(`[auth] verification link for ${email}: ${verifyUrl}`);
-    } else {
-      console.error(
-        `[auth] verification link generated for ${email} but no email provider is configured — link was not delivered: ${verifyUrl}`
-      );
+    }
+
+    // lib/email.ts's sendEmail() never pretends to have delivered
+    // something it didn't — if no provider is configured, this logs and
+    // returns sent:false rather than silently no-oping. Until a provider
+    // is wired in, existing guest history simply stays unclaimed rather
+    // than being handed out on an unverified email (the whole point of
+    // requiring this step at all).
+    const result = await sendEmail(accountVerificationEmail({ to: email, verifyUrl }));
+    if (!result.sent && process.env.NODE_ENV === "production") {
+      console.error(`[auth] verification email not sent for ${email}: ${result.error ?? "no provider configured"}`);
     }
   }
 

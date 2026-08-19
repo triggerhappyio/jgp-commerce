@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { auth, STAFF_ROLES } from "@/lib/auth";
+import { deleteProductImage } from "@/lib/storage";
 import { ProductStatus } from "@prisma/client";
 
 async function requireStaff() {
@@ -143,5 +144,42 @@ export async function addVariant(productId: string, formData: FormData) {
 export async function toggleVariantActive(variantId: string, productId: string, active: boolean) {
   await requireStaff();
   await prisma.productVariant.update({ where: { id: variantId }, data: { active } });
+  revalidatePath(`/admin/products/${productId}`);
+}
+
+// Attaches an already-uploaded blob URL to a product. The upload itself
+// (auth check, file-type/size validation) happens in
+// app/api/admin/upload-image/route.ts — this action only ever runs after
+// a real object already exists in storage; it never accepts an arbitrary
+// client-supplied URL as a substitute for actually uploading a file.
+export async function attachProductImage(productId: string, url: string) {
+  await requireStaff();
+  const existingCount = await prisma.productImage.count({ where: { productId } });
+  await prisma.productImage.create({
+    data: { productId, url, alt: "", position: existingCount }
+  });
+  revalidatePath(`/admin/products/${productId}`);
+}
+
+export async function removeProductImage(imageId: string, productId: string) {
+  await requireStaff();
+  const image = await prisma.productImage.findUniqueOrThrow({ where: { id: imageId } });
+  await prisma.productImage.delete({ where: { id: imageId } });
+  await deleteProductImage(image.url);
+  revalidatePath(`/admin/products/${productId}`);
+}
+
+// Swap with the previous image's position — simple, safe adjacent-swap
+// reordering rather than a full drag-and-drop list.
+export async function moveProductImageUp(imageId: string, productId: string) {
+  await requireStaff();
+  const images = await prisma.productImage.findMany({ where: { productId }, orderBy: { position: "asc" } });
+  const index = images.findIndex((img) => img.id === imageId);
+  if (index <= 0) return; // already first, or not found
+  const [current, previous] = [images[index], images[index - 1]];
+  await prisma.$transaction([
+    prisma.productImage.update({ where: { id: current.id }, data: { position: previous.position } }),
+    prisma.productImage.update({ where: { id: previous.id }, data: { position: current.position } })
+  ]);
   revalidatePath(`/admin/products/${productId}`);
 }

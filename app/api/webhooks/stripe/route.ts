@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { commitReservationsForAttempt, releaseReservationsForAttempt } from "@/lib/inventory";
 import { formatOrderNumber } from "@/lib/orders";
+import { sendEmail, orderConfirmationEmail } from "@/lib/email";
 import { ReservationStatus } from "@prisma/client";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -100,7 +101,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
+  const confirmationEmail = await prisma.$transaction(async (tx) => {
     const reservations = await tx.reservation.findMany({
       where: { checkoutAttemptId, status: ReservationStatus.ACTIVE },
       include: { variant: { include: { product: true } } }
@@ -108,7 +109,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     if (reservations.length === 0) {
       console.error(`[webhook] no active reservations for checkout attempt ${checkoutAttemptId} — cannot build order`);
-      return;
+      return null;
     }
 
     let customer = null;
@@ -183,8 +184,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       }
     });
 
-    // TODO: send order confirmation email once an email provider is wired
-    // in (see README) — isolated to lib/email.ts so this call site won't
-    // need to change.
+    return {
+      to: order.email,
+      orderNumber: formatOrderNumber(order.orderSeq),
+      totalCents,
+      items: reservations.map((r) => ({ productName: r.variant.product.name, quantity: r.quantity }))
+    };
   });
+
+  // Sent after the transaction commits, deliberately — a slow/unavailable
+  // email provider must never block or roll back an already-successful
+  // payment/order write. sendEmail() never throws (see lib/email.ts); its
+  // result is only logged.
+  if (confirmationEmail) {
+    const result = await sendEmail(orderConfirmationEmail(confirmationEmail));
+    if (!result.sent) {
+      console.error(`[webhook] order confirmation email not sent for ${confirmationEmail.orderNumber}: ${result.error ?? "no provider configured"}`);
+    }
+  }
 }

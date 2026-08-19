@@ -1,13 +1,16 @@
-// Transactional email — service interface only. No provider is wired in
-// (see .env.example "Not wired in yet"). This does NOT pretend an email
-// was delivered: `sendEmail()` logs the would-be send in development and
-// logs a loud, explicit "not configured" error in production, but never
-// reports success for a send that didn't happen.
+// Transactional email — Resend in production, a safe console adapter in
+// development. This does NOT pretend an email was delivered: `sendEmail()`
+// only ever reports `sent: true` after Resend actually accepts the
+// message; every other path (no provider configured, Resend API error)
+// reports `sent: false` and logs why, loudly.
 //
-// When a provider is picked (Resend is the natural fit — same team as
-// Vercel, generous free tier, good deliverability), only this file
-// changes: swap the body of `sendEmail()` for a real API call. No call
-// site (order confirmation, refund confirmation, etc.) needs to change.
+// Email failure must never roll back or block an already-legitimate
+// commerce action (a payment, a refund) — see every call site in
+// app/api/webhooks/stripe and lib/actions/*.ts: sendEmail() is called
+// after the transaction commits, its result is logged, and it is never
+// awaited inside the same transaction as the financial write.
+import { Resend } from "resend";
+
 export type EmailMessage = {
   to: string;
   subject: string;
@@ -15,26 +18,60 @@ export type EmailMessage = {
   html?: string;
 };
 
-export async function sendEmail(message: EmailMessage): Promise<{ sent: boolean }> {
-  const provider = process.env.RESEND_API_KEY;
+let resendClient: Resend | null = null;
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  if (!resendClient) resendClient = new Resend(apiKey);
+  return resendClient;
+}
 
-  if (!provider) {
+/**
+ * Production fails closed for the same reason as
+ * lib/rate-limit.ts's assertRateLimiterConfigured(): a production
+ * deployment silently not sending order confirmations is a worse failure
+ * mode than refusing to start handling the request that would have
+ * triggered one. Call sites that consider email non-optional (none do
+ * today — see the comment above) would call this; the current call sites
+ * treat email as best-effort and don't.
+ */
+export function assertEmailProviderConfigured(): void {
+  if (process.env.NODE_ENV === "production" && (!getResend() || !process.env.EMAIL_FROM)) {
+    throw new Error("Email is not configured for production: set RESEND_API_KEY and EMAIL_FROM.");
+  }
+}
+
+export async function sendEmail(message: EmailMessage): Promise<{ sent: boolean; error?: string }> {
+  const resend = getResend();
+  const from = process.env.EMAIL_FROM;
+
+  if (!resend || !from) {
     if (process.env.NODE_ENV !== "production") {
       console.log(`[email] (dev, no provider configured) would send to ${message.to}: "${message.subject}"`);
-    } else {
-      console.error(
-        `[email] No email provider configured — "${message.subject}" to ${message.to} was NOT sent. Set RESEND_API_KEY (or wire a different provider into lib/email.ts).`
-      );
+      return { sent: false };
     }
-    return { sent: false };
+    const reason = "No email provider configured (RESEND_API_KEY / EMAIL_FROM missing)";
+    console.error(`[email] ${reason} — "${message.subject}" to ${message.to} was NOT sent.`);
+    return { sent: false, error: reason };
   }
 
-  // TODO: real provider call goes here once RESEND_API_KEY (or equivalent)
-  // is set. Intentionally not stubbed further — a fake "success" path here
-  // would be exactly the kind of pretend-it-was-delivered behavior this
-  // file exists to avoid.
-  console.error(`[email] RESEND_API_KEY is set but no provider integration is implemented yet.`);
-  return { sent: false };
+  try {
+    const result = await resend.emails.send({
+      from,
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      html: message.html
+    });
+    if (result.error) {
+      console.error(`[email] Resend rejected "${message.subject}" to ${message.to}:`, result.error);
+      return { sent: false, error: result.error.message };
+    }
+    return { sent: true };
+  } catch (err: any) {
+    console.error(`[email] Failed to send "${message.subject}" to ${message.to}:`, err);
+    return { sent: false, error: String(err?.message ?? err) };
+  }
 }
 
 // ── Templates ────────────────────────────────────────────────────────────

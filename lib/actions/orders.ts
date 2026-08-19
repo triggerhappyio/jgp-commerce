@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth, STAFF_ROLES } from "@/lib/auth";
+import { sendEmail, shippingConfirmationEmail, refundConfirmationEmail } from "@/lib/email";
 import { FulfillmentStatus, OrderStatus } from "@prisma/client";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", { apiVersion: "2024-06-20" });
@@ -34,7 +35,7 @@ export async function updateFulfillment(orderId: string, formData: FormData) {
     throw new Error("Invalid fulfillment status");
   }
 
-  await prisma.order.update({
+  const order = await prisma.order.update({
     where: { id: orderId },
     data: {
       fulfillmentStatus: fulfillmentStatus as FulfillmentStatus,
@@ -48,6 +49,15 @@ export async function updateFulfillment(orderId: string, formData: FormData) {
     await prisma.shipment.create({
       data: { orderId, carrier: carrier ?? undefined, trackingNumber, status: "shipped", shippedAt: new Date() }
     });
+
+    // Best-effort, after the write — a slow/down email provider must never
+    // block marking an order shipped.
+    const result = await sendEmail(
+      shippingConfirmationEmail({ to: order.email, orderNumber: order.orderNumber ?? orderId, carrier, trackingNumber })
+    );
+    if (!result.sent) {
+      console.error(`[orders] shipping confirmation email not sent for ${order.orderNumber}: ${result.error ?? "no provider configured"}`);
+    }
   }
 
   revalidatePath(`/admin/orders/${orderId}`);
@@ -82,10 +92,12 @@ export async function refundOrder(orderId: string, formData: FormData) {
   // Order row serializes concurrent refund attempts on the *same* order
   // (different orders are never contended) so the second request's
   // remaining-balance read only happens after the first has committed.
-  await prisma.$transaction(
+  const result = await prisma.$transaction(
     async (tx) => {
-      const [order] = await tx.$queryRaw<{ id: string; stripePaymentIntentId: string | null; totalCents: number }[]>`
-        SELECT id, "stripePaymentIntentId", "totalCents" FROM "Order" WHERE id = ${orderId} FOR UPDATE
+      const [order] = await tx.$queryRaw<
+        { id: string; stripePaymentIntentId: string | null; totalCents: number; email: string; orderNumber: string | null }[]
+      >`
+        SELECT id, "stripePaymentIntentId", "totalCents", email, "orderNumber" FROM "Order" WHERE id = ${orderId} FOR UPDATE
       `;
       if (!order) throw new Error("Order not found.");
       if (!order.stripePaymentIntentId) {
@@ -133,9 +145,17 @@ export async function refundOrder(orderId: string, formData: FormData) {
         }
       });
 
+      return { amountCents, email: order.email, orderNumber: order.orderNumber };
     },
     { timeout: 15000 }
   );
+
+  const emailResult = await sendEmail(
+    refundConfirmationEmail({ to: result.email, orderNumber: result.orderNumber ?? orderId, amountCents: result.amountCents })
+  );
+  if (!emailResult.sent) {
+    console.error(`[orders] refund confirmation email not sent for ${result.orderNumber}: ${emailResult.error ?? "no provider configured"}`);
+  }
 
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/orders");
