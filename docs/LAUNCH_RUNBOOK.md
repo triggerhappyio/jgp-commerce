@@ -74,6 +74,38 @@ stays live and reachable through T+24 HOURS at minimum.
 
 ## T+1 HOUR
 
+### Deliberate live test-order procedure
+
+This is the controlled live transaction referenced above — done once
+here, deliberately, not automated (`npm run verify:production` is
+read-only and never places an order — see its header comment).
+
+1. Pick a known, low-risk JGP product/variant with enough stock that this
+   purchase can't accidentally sell out something scarce.
+2. Confirm its current inventory count in `/admin/inventory` before
+   buying.
+3. Place one real, controlled payment for it, live mode, real card.
+4. Record the Stripe payment ID (Dashboard → Payments).
+5. Confirm **exactly one** JGP Order was created for it (`/admin/orders`,
+   search by the email used).
+6. Confirm the order's totals (subtotal/tax/shipping/total) match what
+   was actually charged in Stripe — they must reconcile exactly.
+7. Confirm inventory for that variant changed by exactly 1, once.
+8. Confirm the order appears correctly in `/admin/orders/[id]`.
+9. Confirm the order-confirmation email arrived.
+10. If everything above is correct: refund/cancel this test order
+    (`/admin/orders/[id]` → Refund) to close it out cleanly.
+11. Confirm the refund reconciled: `Refund` record created, `paymentStatus`
+    updated to `REFUNDED`, Stripe Dashboard shows the refund.
+12. Check Vercel function logs and the `StripeEvent` table for any error
+    during this whole sequence.
+
+**If any step fails: DO NOT CONTINUE THE LAUNCH.** Follow ROLLBACK
+CONDITIONS below immediately — do not attempt to debug live with real
+traffic already pointed at the new system.
+
+Record the outcome in `docs/VALIDATION_RESULTS.md`.
+
 - [ ] Place one more real, low-value live purchase — confirm order,
       inventory, and email again, now against the real domain with real
       DNS/TLS in the path (not just the temporary Vercel URL from T-2).
