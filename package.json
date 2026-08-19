@@ -12,11 +12,22 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:commerce": "vitest run tests/integration",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
+    "env:check": "tsx scripts/env-check.ts",
+    "db:check": "tsx scripts/db-check.ts",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:seed:staging": "tsx prisma/seed-staging.ts",
+    "db:studio": "prisma studio",
+    "reconcile:shopify": "tsx scripts/shopify-import/reconcile-report.ts",
+    "verify:staging": "tsx scripts/verify-deployment.ts staging",
+    "verify:production": "tsx scripts/verify-deployment.ts production",
+    "launch:check": "tsx scripts/launch-check.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

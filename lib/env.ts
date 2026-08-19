@@ -49,6 +49,69 @@ export function appUrl(): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Environment mode — NODE_ENV alone isn't enough: Vercel Preview
+// deployments also run with NODE_ENV=production, so "is this really
+// production" and "is this a production build" are different questions.
+// VERCEL_ENV (set automatically by Vercel: "production" | "preview" |
+// "development") is authoritative when present; APP_ENV is the manual
+// fallback for non-Vercel environments (local dev, CI).
+// ─────────────────────────────────────────────────────────────────────────
+export type AppEnv = "development" | "preview" | "production";
+
+export function appEnv(): AppEnv {
+  const vercelEnv = process.env.VERCEL_ENV;
+  if (vercelEnv === "production" || vercelEnv === "preview" || vercelEnv === "development") {
+    return vercelEnv;
+  }
+  const manual = process.env.APP_ENV;
+  if (manual === "production" || manual === "preview" || manual === "development") {
+    return manual;
+  }
+  return process.env.NODE_ENV === "production" ? "production" : "development";
+}
+
+export class UnsafeEnvironmentError extends Error {}
+
+/**
+ * Fails fast on dangerous environment/secret combinations that a plain
+ * "is this var present" check can't catch — a present-but-wrong secret is
+ * worse than a missing one. Call at the top of the checkout route (the
+ * one place a wrong Stripe key would actually move real or fake money).
+ */
+export function assertSafeEnvironmentCombination(): void {
+  const env = appEnv();
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+
+  if (stripeKey) {
+    const isLiveKey = stripeKey.startsWith("sk_live_");
+    const isTestKey = stripeKey.startsWith("sk_test_");
+    if (env !== "production" && isLiveKey) {
+      throw new UnsafeEnvironmentError(
+        `Refusing to start: a Stripe LIVE key is set in a "${env}" environment. This would take real payments from a non-production deployment.`
+      );
+    }
+    if (env === "production" && isTestKey) {
+      throw new UnsafeEnvironmentError(
+        `Refusing to start: a Stripe TEST key is set in the production environment. Production must use a live key — a test key here would silently fail to take real payments.`
+      );
+    }
+  }
+
+  // Opt-in extra guard: operators can tag a database connection string's
+  // environment as a comment-style suffix or set this alongside
+  // DATABASE_URL if they want a hard stop against ever pointing a
+  // non-production deployment at the production database. Not required —
+  // absence of this var is not itself an error — but if present and it
+  // says "production" while we're not actually in production, that's
+  // exactly the dangerous combination Phase 2 asks to catch.
+  if (process.env.DATABASE_ENV === "production" && env !== "production") {
+    throw new UnsafeEnvironmentError(
+      `Refusing to start: DATABASE_ENV=production is set in a "${env}" environment. This looks like the production database URL was pasted into the wrong place.`
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Environment variable contract — every variable this app reads,
 // categorized. Kept as data (not just comments) so it can be asserted
 // against in a CI step later if useful; today it's the authoritative

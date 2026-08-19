@@ -6,6 +6,7 @@ import { reserveInventory, releaseReservationsForAttempt } from "@/lib/inventory
 import { automaticTaxParam } from "@/lib/tax";
 import { shippingOptionsParam } from "@/lib/shipping";
 import { checkRateLimit, clientKeyFrom, assertRateLimiterConfigured } from "@/lib/rate-limit";
+import { assertSafeEnvironmentCombination } from "@/lib/env";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2024-06-20"
@@ -14,6 +15,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 const RESERVATION_SECONDS = 30 * 60; // must match lib/inventory.ts RESERVATION_TTL_MS
 
 export async function POST(req: NextRequest) {
+  assertSafeEnvironmentCombination();
   assertRateLimiterConfigured();
   const rateLimit = await checkRateLimit(clientKeyFrom(req, "checkout"), 20, 10 * 60 * 1000, "checkout"); // 20/10min/IP
   if (!rateLimit.allowed) {
