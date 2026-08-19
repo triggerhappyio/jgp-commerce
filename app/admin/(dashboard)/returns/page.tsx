@@ -3,10 +3,6 @@ import { prisma } from "@/lib/prisma";
 
 export const revalidate = 0;
 
-// Returns/exchanges: the data model (Return, ReturnItem, restock/exchange
-// linkage) is in schema.prisma and ready to build against. This is
-// currently read-only — there's no "start a return" action wired up yet
-// (Phase 6 in README) — so this list will be empty until that ships.
 export default async function AdminReturnsPage() {
   const returns = await prisma.return.findMany({
     include: { order: true, items: true },
@@ -17,8 +13,8 @@ export default async function AdminReturnsPage() {
     <div style={{ padding: 32 }}>
       <h1 style={{ fontSize: 26, marginBottom: 8 }}>Returns</h1>
       <p style={{ color: "var(--steel)", fontSize: 14, marginBottom: 20 }}>
-        Return/exchange creation isn&apos;t wired up yet — see README &quot;Next&quot; section. The data model
-        (Return, ReturnItem, restock + exchange linkage) is ready.
+        Start a return from an order&apos;s detail page. Exchanges are same-price-only in V1 — a
+        price-difference swap should be processed as a return + refund + a new separate order.
       </p>
       <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>
         <thead>
@@ -33,7 +29,9 @@ export default async function AdminReturnsPage() {
           {returns.map((r) => (
             <tr key={r.id} style={{ borderBottom: "1px solid var(--bone-dim)" }}>
               <td style={{ padding: "10px 0" }}>
-                <Link href={`/admin/orders/${r.orderId}`}>{r.order.orderNumber}</Link>
+                <Link href={`/admin/returns/${r.id}`} style={{ fontWeight: 600 }}>
+                  {r.order.orderNumber}
+                </Link>
               </td>
               <td>{r.status}</td>
               <td>{r.items.length}</td>

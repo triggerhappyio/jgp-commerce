@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { updateFulfillment, cancelOrder, refundOrder } from "@/lib/actions/orders";
+import { createReturn } from "@/lib/actions/returns";
 
 export const revalidate = 0;
 
@@ -8,12 +10,29 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const { id } = await params;
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { items: true, payments: true, refunds: true, shipments: true, customer: true }
+    include: {
+      items: { include: { productVariant: { include: { product: { include: { variants: true } } } } } },
+      payments: true,
+      refunds: true,
+      shipments: true,
+      customer: true,
+      returns: { include: { items: true } }
+    }
   });
 
   if (!order) return notFound();
 
   const totalRefunded = order.refunds.reduce((s, r) => s + r.amountCents, 0);
+  const alreadyReturnedByItem = new Map<string, number>();
+  for (const ret of order.returns) {
+    if (ret.status === "REJECTED") continue;
+    for (const ri of ret.items) {
+      alreadyReturnedByItem.set(ri.orderItemId, (alreadyReturnedByItem.get(ri.orderItemId) ?? 0) + ri.quantity);
+    }
+  }
+  const returnableItems = order.items.filter(
+    (item) => item.quantity - (alreadyReturnedByItem.get(item.id) ?? 0) > 0
+  );
 
   return (
     <div style={{ padding: 32, maxWidth: 880 }}>
@@ -99,6 +118,72 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
               </button>
             </form>
           </div>
+
+          {order.returns.length > 0 && (
+            <div className="card" style={{ padding: 20, marginTop: 16 }}>
+              <div style={{ fontWeight: 600, marginBottom: 8 }}>Returns</div>
+              {order.returns.map((r) => (
+                <div key={r.id} style={{ fontSize: 14, padding: "6px 0" }}>
+                  <Link href={`/admin/returns/${r.id}`}>Return {r.id.slice(0, 8)}</Link> — {r.status}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {returnableItems.length > 0 && (
+            <div className="card" style={{ padding: 20, marginTop: 16 }}>
+              <div style={{ fontWeight: 600, marginBottom: 12 }}>Start a Return</div>
+              <form action={createReturn.bind(null, order.id)} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {returnableItems.map((item) => {
+                  const remaining = item.quantity - (alreadyReturnedByItem.get(item.id) ?? 0);
+                  const siblingVariants = item.productVariant?.product.variants.filter((v) => v.id !== item.productVariantId && v.active) ?? [];
+                  return (
+                    <div key={item.id} style={{ borderTop: "1px solid var(--bone-dim)", paddingTop: 10 }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                        <input type="checkbox" name="orderItemId" value={item.id} />
+                        {item.productName}
+                        {item.color ? ` — ${item.color}` : ""}
+                        {item.size ? ` (${item.size})` : ""} ({remaining} eligible)
+                      </label>
+                      <div style={{ display: "flex", gap: 8, marginTop: 6, marginLeft: 24 }}>
+                        <label style={{ fontSize: 12 }}>
+                          Qty
+                          <input
+                            type="number"
+                            name={`quantity_${item.id}`}
+                            defaultValue={1}
+                            min={1}
+                            max={remaining}
+                            style={{ display: "block", width: 60, padding: 4 }}
+                          />
+                        </label>
+                        {siblingVariants.length > 0 && (
+                          <label style={{ fontSize: 12, flex: 1 }}>
+                            Exchange for (optional, same price only)
+                            <select name={`exchangeFor_${item.id}`} defaultValue="" style={{ display: "block", width: "100%", padding: 4 }}>
+                              <option value="">No exchange — refund instead</option>
+                              {siblingVariants.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  {v.color} {v.size} — ${(v.priceCents / 100).toFixed(2)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                <label style={{ fontSize: 13 }}>
+                  Reason
+                  <input name="reason" style={{ display: "block", width: "100%", padding: 8, marginTop: 4 }} />
+                </label>
+                <button className="btn btn-ghost" type="submit">
+                  Create Return
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         <div>
