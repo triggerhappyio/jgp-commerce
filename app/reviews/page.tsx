@@ -21,7 +21,7 @@ export default function ReviewsPage() {
           {reviews.map((r) => (
             <div key={r.name} className="card" style={{ padding: 24 }}>
               <div style={{ color: "var(--brass)", marginBottom: 8 }}>★★★★★</div>
-              <p style={{ fontStyle: "italic" }}>"{r.body}"</p>
+              <p style={{ fontStyle: "italic" }}>&quot;{r.body}&quot;</p>
               <div style={{ fontSize: 13, color: "var(--steel)", marginTop: 12 }}>
                 {r.name} — Google review · {r.date}
               </div>

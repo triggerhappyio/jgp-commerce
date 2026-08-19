@@ -24,9 +24,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // cart; a logged-in customer's cart additionally syncs to the DB (see
   // Cart/CartItem in schema.prisma) once account merge is built — see
   // README NEXT section.
+  //
+  // Deliberately NOT a useState lazy initializer / useSyncExternalStore:
+  // the server always renders with an empty cart (no access to
+  // localStorage), so hydrating from localStorage during the initial
+  // client render — rather than in a post-mount effect — would make the
+  // client's first render disagree with the server-rendered HTML, which
+  // React treats as a hydration error. Reading it here, one render after
+  // mount, is the safe way to avoid that mismatch; the eslint-disable
+  // below is for that specific, understood tradeoff, not a blanket
+  // suppression.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
       if (raw) setLines(JSON.parse(raw));
     } catch {
       // ignore corrupt/unavailable storage

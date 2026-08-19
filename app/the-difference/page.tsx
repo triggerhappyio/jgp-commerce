@@ -16,7 +16,7 @@ export default function TheDifferencePage() {
         <div className="eyebrow">Not Just a Shoe</div>
         <h1 style={{ maxWidth: 640 }}>Built different, by design.</h1>
         <p style={{ maxWidth: 620, marginBottom: 40 }}>
-          We don't chase softness for its own sake. JGP uses a firmer, more structured build to give
+          We don&apos;t chase softness for its own sake. JGP uses a firmer, more structured build to give
           your feet a stable foundation — designed to support better balance and a more natural
           stance, step after step.
         </p>

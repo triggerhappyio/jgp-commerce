@@ -17,7 +17,7 @@ export default async function AdminReturnsPage() {
     <div style={{ padding: 32 }}>
       <h1 style={{ fontSize: 26, marginBottom: 8 }}>Returns</h1>
       <p style={{ color: "var(--steel)", fontSize: 14, marginBottom: 20 }}>
-        Return/exchange creation isn't wired up yet — see README "Next" section. The data model
+        Return/exchange creation isn&apos;t wired up yet — see README &quot;Next&quot; section. The data model
         (Return, ReturnItem, restock + exchange linkage) is ready.
       </p>
       <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>

@@ -75,7 +75,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               Sizing, shipping &amp; returns
             </summary>
             <p style={{ marginTop: 12 }}>
-              JGP uses Korean millimeter sizing. If you're unsure of your size, visit either store
+              JGP uses Korean millimeter sizing. If you&apos;re unsure of your size, visit either store
               for a free footprint analysis, or check the size guide before ordering.
             </p>
             <p>

@@ -7,7 +7,7 @@ export default function ContactPage() {
     <main className="section">
       <div className="container" style={{ maxWidth: 560 }}>
         <div className="eyebrow">Visit or Reach Us</div>
-        <h1>We're here to help.</h1>
+        <h1>We&apos;re here to help.</h1>
         {locations.map((loc) => (
           <div key={loc.id} className="card" style={{ padding: 28, marginTop: 24 }}>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>{loc.name} Store</div>

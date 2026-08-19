@@ -26,7 +26,7 @@ export default function TheSciencePage() {
           ))}
         </div>
         <p style={{ fontSize: 13, color: "var(--steel)", marginTop: 40, maxWidth: 560 }}>
-          Design goals reflect JGP's product philosophy, not measured clinical outcomes for any
+          Design goals reflect JGP&apos;s product philosophy, not measured clinical outcomes for any
           individual. JGP footwear is not a medical device and is not intended to diagnose, treat,
           cure, or prevent any condition.
         </p>

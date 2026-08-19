@@ -16,7 +16,7 @@ export default async function AdminPurchasingPage() {
     <div style={{ padding: 32 }}>
       <h1 style={{ fontSize: 26, marginBottom: 8 }}>Purchasing</h1>
       <p style={{ color: "var(--steel)", fontSize: 14, marginBottom: 20 }}>
-        Purchase order creation isn't wired up yet — see README "Next" section. The data model
+        Purchase order creation isn&apos;t wired up yet — see README &quot;Next&quot; section. The data model
         (Supplier, PurchaseOrder, PurchaseOrderItem, ReceivingRecord) is ready.
       </p>
       <table style={{ width: "100%", fontSize: 14, borderCollapse: "collapse" }}>

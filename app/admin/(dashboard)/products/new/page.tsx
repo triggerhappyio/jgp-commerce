@@ -21,8 +21,8 @@ export default function NewProductPage() {
           <label style={{ fontSize: 13, flex: 1 }}>
             Gender
             <select name="gender" style={{ display: "block", width: "100%", padding: 10, marginTop: 4 }}>
-              <option>Men's</option>
-              <option>Women's</option>
+              <option>Men&apos;s</option>
+              <option>Women&apos;s</option>
               <option>Unisex</option>
             </select>
           </label>
