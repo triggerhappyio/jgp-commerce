@@ -16,10 +16,13 @@ until it's proven.
 | Images | `ProductImage.url` — Shopify's CDN URLs can be used directly at first (no re-hosting required to launch), or migrated to real storage once one is wired in (see README "Not built yet") |
 | Status | `Product.status` (`DRAFT`/`ACTIVE`/`ARCHIVED`) — map Shopify's "active"/"draft"/"archived" directly |
 
-Write a one-off script (pattern: `prisma/seed.ts`, but reading Shopify's
-CSV/API export instead of hardcoded data) that upserts by `sku` — safe to
-re-run as the export is refined. Do not hand-edit production data through
-`prisma studio` for a catalog this size; script it.
+Run `npx tsx scripts/shopify-import/import-products.ts path/to/products.json`
+— see the script's header comment for the exact expected JSON shape.
+Upserts by `sku`, idempotent/safe to re-run as the export is refined.
+Every imported product lands as `DRAFT` regardless of its Shopify status —
+a human reviews and activates it via `/admin/products`, never the import
+script. Do not hand-edit production data through `prisma studio` for a
+catalog this size; use the script.
 
 **Do not import Shopify inventory quantities as-is without a final
 reconciliation count** — see "Inventory" below; the export is a snapshot
@@ -42,6 +45,8 @@ This means: import all Shopify customers as `Customer` rows now; nobody
 needs to "migrate" a login, they just register normally later and their
 history attaches automatically via the existing verified-email claim flow.
 
+Run `npx tsx scripts/shopify-import/import-customers.ts path/to/customers.json`.
+
 ## 3. Orders
 
 Historical orders are **read-only history**, not live commerce data:
@@ -63,17 +68,23 @@ Historical orders are **read-only history**, not live commerce data:
   level payment history matters for support, store it as a note/reference,
   not as a row implying it went through this app's Stripe integration.
 
+Run `npx tsx scripts/shopify-import/import-orders.ts path/to/orders.json` —
+idempotent (safe to re-run; already-imported orders, matched by
+`legacyShopifyOrderId`, are skipped).
+
 ## 4. Inventory
 
 1. **Freeze** — pick a cutover instant. Stop taking new Shopify orders (or
    accept the small reconciliation gap below) at that instant.
 2. **Final export** — pull Shopify's inventory counts per SKU per location
    at the freeze instant.
-3. **Reconcile** — for any physical location that maps to a location in
-   this app (Koreatown, Buena Park, Warehouse), set `InventoryLevel.quantity`
-   to the reconciled count, logged as one `InventoryTransaction`
-   (`type: RECEIVING`, `reason: "Shopify migration cutover count"`) per
-   variant/location — never a silent bulk `UPDATE` with no audit trail.
+3. **Reconcile** — run
+   `npx tsx scripts/shopify-import/reconcile-inventory.ts path/to/inventory-snapshot.json`.
+   For any physical location that maps to a location in this app
+   (Koreatown, Buena Park, Warehouse), it sets `InventoryLevel.quantity` to
+   the reconciled count, logging the delta as an audited
+   `InventoryTransaction` (`type: RECEIVING`) per variant/location — never
+   a silent bulk `UPDATE`. Idempotent (unchanged rows are skipped).
 4. Orders placed in the gap between "final export" and "app goes live"
    (if any) need manual reconciliation — there is no way to avoid this
    without a true zero-downtime cutover, which isn't necessary for a
