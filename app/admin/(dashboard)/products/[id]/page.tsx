@@ -5,9 +5,10 @@ import { ProductStatus } from "@prisma/client";
 
 export const revalidate = 0;
 
-export default async function AdminProductDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const product = await prisma.product.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { variants: { include: { inventoryLevels: true }, orderBy: [{ color: "asc" }, { size: "asc" }] } }
   });
   if (!product) return notFound();

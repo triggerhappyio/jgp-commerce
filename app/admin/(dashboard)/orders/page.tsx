@@ -5,10 +5,11 @@ import { Prisma } from "@prisma/client";
 export const revalidate = 0;
 
 export default async function AdminOrdersPage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams: { q?: string; fulfillment?: string; payment?: string };
+  searchParams: Promise<{ q?: string; fulfillment?: string; payment?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const where: Prisma.OrderWhereInput = {};
   if (searchParams.fulfillment) where.fulfillmentStatus = searchParams.fulfillment as any;
   if (searchParams.payment) where.paymentStatus = searchParams.payment as any;

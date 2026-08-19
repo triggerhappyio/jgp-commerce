@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 
 export const revalidate = 0;
 
-export default async function AdminCustomerDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminCustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const customer = await prisma.customer.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       orders: { orderBy: { createdAt: "desc" }, include: { items: true } },
       addresses: true,

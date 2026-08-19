@@ -6,10 +6,11 @@ export const revalidate = 0;
 const LOW_STOCK_THRESHOLD = 5;
 
 export default async function AdminInventoryPage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams: { q?: string; location?: string };
+  searchParams: Promise<{ q?: string; location?: string }>;
 }) {
+  const searchParams = await searchParamsPromise;
   const [locations, variants] = await Promise.all([
     prisma.inventoryLocation.findMany({ orderBy: { name: "asc" } }),
     prisma.productVariant.findMany({

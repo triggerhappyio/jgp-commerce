@@ -3,15 +3,16 @@ import { prisma } from "@/lib/prisma";
 
 export const revalidate = 0;
 
-export default async function InventoryHistoryPage({ params }: { params: { variantId: string } }) {
+export default async function InventoryHistoryPage({ params }: { params: Promise<{ variantId: string }> }) {
+  const { variantId } = await params;
   const variant = await prisma.productVariant.findUnique({
-    where: { id: params.variantId },
+    where: { id: variantId },
     include: { product: true }
   });
   if (!variant) return notFound();
 
   const transactions = await prisma.inventoryTransaction.findMany({
-    where: { variantId: params.variantId },
+    where: { variantId },
     include: { location: true },
     orderBy: { createdAt: "desc" },
     take: 200

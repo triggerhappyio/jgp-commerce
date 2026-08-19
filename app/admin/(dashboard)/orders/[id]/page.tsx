@@ -4,9 +4,10 @@ import { updateFulfillment, cancelOrder, refundOrder } from "@/lib/actions/order
 
 export const revalidate = 0;
 
-export default async function AdminOrderDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { items: true, payments: true, refunds: true, shipments: true, customer: true }
   });
 

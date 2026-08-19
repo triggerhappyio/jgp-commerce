@@ -6,8 +6,9 @@ import { ProductStatus } from "@prisma/client";
 
 export const revalidate = 0; // catalog/inventory changes should show immediately
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  const product = await prisma.product.findUnique({ where: { slug: params.slug } });
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const product = await prisma.product.findUnique({ where: { slug } });
   if (!product) return { title: "Product | JGP USA" };
   return {
     title: `${product.name} | JGP USA`,
@@ -16,9 +17,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ProductPage({ params }: { params: { slug: string } }) {
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const product = await prisma.product.findUnique({
-    where: { slug: params.slug, status: ProductStatus.ACTIVE },
+    where: { slug, status: ProductStatus.ACTIVE },
     include: {
       images: { orderBy: { position: "asc" } },
       variants: {

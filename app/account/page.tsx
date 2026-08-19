@@ -6,11 +6,11 @@ import SignOutButton from "@/components/SignOutButton";
 export const metadata = { title: "Your Account | JGP USA" };
 
 export default async function AccountPage({
-  searchParams
+  searchParams: searchParamsPromise
 }: {
-  searchParams: { verified?: string; checkEmail?: string };
+  searchParams: Promise<{ verified?: string; checkEmail?: string }>;
 }) {
-  const session = await auth();
+  const [session, searchParams] = await Promise.all([auth(), searchParamsPromise]);
   if (!session?.user) redirect("/account/login");
 
   const customer = await prisma.customer.findUnique({

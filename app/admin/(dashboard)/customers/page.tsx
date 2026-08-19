@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 
 export const revalidate = 0;
 
-export default async function AdminCustomersPage({ searchParams }: { searchParams: { q?: string } }) {
+export default async function AdminCustomersPage({
+  searchParams: searchParamsPromise
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const searchParams = await searchParamsPromise;
   const customers = await prisma.customer.findMany({
     where: searchParams.q
       ? {
