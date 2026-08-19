@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { products } from "@/lib/products";
+import { prisma } from "@/lib/prisma";
 import { locations } from "@/lib/locations";
+import { ProductStatus } from "@prisma/client";
 
-export default function Home() {
-  const featured = products.slice(0, 4);
+export const revalidate = 0;
+
+export default async function Home() {
+  const featured = await prisma.product.findMany({
+    where: { status: ProductStatus.ACTIVE },
+    include: { variants: { where: { active: true }, select: { priceCents: true } } },
+    orderBy: { createdAt: "asc" },
+    take: 4
+  });
   return (
     <main>
       {/* Hero */}
@@ -76,15 +84,19 @@ export default function Home() {
           <div className="eyebrow">Most Popular</div>
           <h2>Shop the collection</h2>
           <div className="grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginTop: 24 }}>
-            {featured.map((p) => (
-              <Link key={p.slug} href={`/shop/${p.slug}`} className="card">
-                <div style={{ aspectRatio: "1", background: "var(--bone-dim)" }} />
-                <div style={{ padding: 16 }}>
-                  <div style={{ fontWeight: 600 }}>{p.name}</div>
-                  <div style={{ color: "var(--steel)", fontSize: 14 }}>${p.price.toFixed(2)}</div>
-                </div>
-              </Link>
-            ))}
+            {featured.map((p) => {
+              const prices = p.variants.map((v) => v.priceCents);
+              const minPrice = prices.length ? Math.min(...prices) : 0;
+              return (
+                <Link key={p.slug} href={`/shop/${p.slug}`} className="card">
+                  <div style={{ aspectRatio: "1", background: "var(--bone-dim)" }} />
+                  <div style={{ padding: 16 }}>
+                    <div style={{ fontWeight: 600 }}>{p.name}</div>
+                    <div style={{ color: "var(--steel)", fontSize: 14 }}>${(minPrice / 100).toFixed(2)}</div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

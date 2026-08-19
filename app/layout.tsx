@@ -3,7 +3,7 @@ import { Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/components/CartContext";
+import Providers from "@/components/Providers";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", weight: ["400", "500", "600"] });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", weight: ["400", "500", "600", "700"] });
@@ -18,11 +18,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
       <body>
-        <CartProvider>
+        <Providers>
           <Nav />
           {children}
           <Footer />
-        </CartProvider>
+        </Providers>
       </body>
     </html>
   );
