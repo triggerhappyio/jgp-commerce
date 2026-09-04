@@ -50,6 +50,20 @@ enum OrderStatus {
   COMPLETED
 }
 
+// Which channel actually produced this order. Exists so the JGP database
+// never has to guess "was this a real web sale or an imported historical
+// record" from side channels like legacyShopifyOrderId being null/not-null
+// — as more channels (retail POS, marketplaces) come online, each gets an
+// explicit value here rather than another nullable marker field.
+enum OrderSource {
+  JGP_WEB
+  SHOPIFY_HISTORICAL
+  ADMIN
+  RETAIL
+  MARKETPLACE
+  OTHER
+}
+
 enum PaymentStatus {
   PENDING
   PAID
@@ -462,6 +476,7 @@ model Order {
   notes          String? // internal staff notes
 
   legacyShopifyOrderId String?
+  source               OrderSource @default(JGP_WEB)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -477,6 +492,7 @@ model Order {
   @@index([paymentStatus])
   @@index([fulfillmentStatus])
   @@index([createdAt])
+  @@index([source])
 }
 
 // Snapshot fields (productName/sku/color/size/unitPriceCents) are captured

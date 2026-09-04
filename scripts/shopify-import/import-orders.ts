@@ -25,7 +25,7 @@
 // the live checkout flow — matching product data is looked up only to
 // link productVariantId where the SKU still exists in the new catalog,
 // never to recompute price/name from current data.
-import { PrismaClient, PaymentStatus } from "@prisma/client";
+import { PrismaClient, PaymentStatus, OrderSource } from "@prisma/client";
 import { readFileSync } from "fs";
 
 const prisma = new PrismaClient();
@@ -107,6 +107,7 @@ async function main() {
           paymentStatus: mapFinancialStatus(o.financial_status),
           fulfillmentStatus: "DELIVERED", // historical orders are assumed already fulfilled — adjust if your export has real fulfillment data
           legacyShopifyOrderId,
+          source: OrderSource.SHOPIFY_HISTORICAL,
           createdAt: new Date(o.created_at)
         }
       });

@@ -130,8 +130,9 @@ migration) first, then tell Prisma which one happened.
 1. Point `DATABASE_URL`/`DIRECT_URL` at a real (can be a free-tier Neon/Supabase)
    database.
 2. Run `npx prisma migrate deploy` and confirm it completes without error.
-3. Run `npx prisma migrate status` — should report the `20260817000000_init`
-   migration as applied, with no pending/failed migrations.
+3. Run `npx prisma migrate status` — should report both
+   `20260817000000_init` and `20260904000000_add_order_source` as applied,
+   with no pending/failed migrations.
 4. Run `npm run db:seed` and confirm the dev catalog seeds correctly.
 5. Only then wire `migrate deploy` into the actual Vercel/CI deploy step.
 

@@ -146,6 +146,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         shippingCents,
         totalCents,
         paymentStatus: "PAID",
+        source: "JGP_WEB",
         stripeSessionId: session.id,
         stripePaymentIntentId:
           typeof session.payment_intent === "string" ? session.payment_intent : undefined
