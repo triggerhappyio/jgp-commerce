@@ -59,29 +59,38 @@ export async function createProduct(formData: FormData) {
 
   const locations = await prisma.inventoryLocation.findMany();
 
-  const productId = await prisma.$transaction(async (tx) => {
-    const product = await tx.product.create({
-      data: { slug, name, description, category, gender, status: ProductStatus.DRAFT }
-    });
+  const productId = await prisma.$transaction(
+    async (tx) => {
+      const product = await tx.product.create({
+        data: { slug, name, description, category, gender, status: ProductStatus.DRAFT }
+      });
 
-    for (const color of colors) {
-      for (const size of sizes) {
-        const sku = skuFor(name, color, size);
-        const existing = await tx.productVariant.findUnique({ where: { sku } });
-        if (existing) {
-          throw new Error(`SKU ${sku} already exists — adjust colors/sizes to avoid a collision.`);
-        }
-        const variant = await tx.productVariant.create({
-          data: { productId: product.id, sku, color, size, priceCents, active: true }
-        });
-        for (const location of locations) {
-          await tx.inventoryLevel.create({ data: { variantId: variant.id, locationId: location.id, quantity: 0 } });
+      for (const color of colors) {
+        for (const size of sizes) {
+          const sku = skuFor(name, color, size);
+          const existing = await tx.productVariant.findUnique({ where: { sku } });
+          if (existing) {
+            throw new Error(`SKU ${sku} already exists — adjust colors/sizes to avoid a collision.`);
+          }
+          const variant = await tx.productVariant.create({
+            data: { productId: product.id, sku, color, size, priceCents, active: true }
+          });
+          for (const location of locations) {
+            await tx.inventoryLevel.create({ data: { variantId: variant.id, locationId: location.id, quantity: 0 } });
+          }
         }
       }
-    }
 
-    return product.id;
-  });
+      return product.id;
+    },
+    // colors x sizes x locations sequential queries — a modestly-sized
+    // catalog entry (e.g. 3 colors x 5 sizes x 3 locations = 15 variants x
+    // ~5 queries each = 75 round trips) comfortably exceeds Prisma's
+    // 5000ms default against a real remote database. Same class of bug as
+    // the webhook/checkout fixes — found once here, applied everywhere
+    // the shape recurs rather than waiting to hit it again per call site.
+    { timeout: 30000 }
+  );
 
   revalidatePath("/admin/products");
   redirect(`/admin/products/${productId}`);

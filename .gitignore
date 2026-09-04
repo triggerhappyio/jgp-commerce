@@ -20,3 +20,6 @@ npm-debug.log*
 
 # prisma
 prisma/*.db
+
+.vercel
+.env*

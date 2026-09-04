@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     } else if (event.type === "checkout.session.expired") {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.client_reference_id) {
-        await prisma.$transaction((tx) => releaseReservationsForAttempt(tx, session.client_reference_id!));
+        await prisma.$transaction((tx) => releaseReservationsForAttempt(tx, session.client_reference_id!), { timeout: 15000 });
       }
     } else if (event.type === "checkout.session.async_payment_succeeded") {
       // checkout.ts pins payment_method_types to ["card"], which never goes
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       const session = event.data.object as Stripe.Checkout.Session;
       console.error(`[webhook] async payment failed for session ${session.id} — releasing hold`);
       if (session.client_reference_id) {
-        await prisma.$transaction((tx) => releaseReservationsForAttempt(tx, session.client_reference_id!));
+        await prisma.$transaction((tx) => releaseReservationsForAttempt(tx, session.client_reference_id!), { timeout: 15000 });
       }
     }
 
@@ -102,6 +102,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   const confirmationEmail = await prisma.$transaction(async (tx) => {
+    // Prisma's default interactive-transaction timeout is 5000ms — too
+    // tight for this transaction's real shape (find reservations, upsert
+    // customer, create + update order, commit N reservations, create N
+    // order items, create payment — several sequential round trips).
+    // Discovered via a real timeout against live Neon Postgres
+    // (tests/integration/webhook-idempotency.test.ts), not a hypothetical
+    // — see the `{ timeout: 15000 }` below.
     const reservations = await tx.reservation.findMany({
       where: { checkoutAttemptId, status: ReservationStatus.ACTIVE },
       include: { variant: { include: { product: true } } }
@@ -191,7 +198,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       totalCents,
       items: reservations.map((r) => ({ productName: r.variant.product.name, quantity: r.quantity }))
     };
-  });
+  }, { timeout: 15000 });
 
   // Sent after the transaction commits, deliberately — a slow/unavailable
   // email provider must never block or roll back an already-successful

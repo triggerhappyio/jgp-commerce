@@ -105,7 +105,7 @@ export async function createReturn(orderId: string, formData: FormData) {
     }
 
     return ret;
-  });
+  }, { timeout: 15000 }); // loops per selected order item — see the same fix in checkout.ts/webhook.ts for why
 
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin/returns");

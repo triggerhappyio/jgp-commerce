@@ -140,8 +140,9 @@ a low-stock variant. The full reasoning is documented in
    real sale — decrements on-hand `quantity`, releases the hold, creates
    the `Order`/`OrderItem` rows, all in one transaction.
 3. `checkout.session.expired` (or the `/api/cron/release-reservations`
-   backstop, wired to run every 5 minutes via `vercel.json`) releases
-   holds whose checkout was abandoned.
+   backstop, wired to run once daily via `vercel.json` — Vercel's Hobby
+   plan caps cron frequency at once/day; this is a backstop, not the
+   primary release path) releases holds whose checkout was abandoned.
 4. Every quantity/reserved change writes a matching `InventoryTransaction`
    audit row — nothing moves without a paper trail.
 
@@ -301,7 +302,8 @@ rollback procedure). Summary:
    migrations automatically; wire it into your deploy process (a build
    command override, or a manual step) rather than skipping it.
 4. `vercel.json` already declares the `/api/cron/release-reservations`
-   cron (every 5 minutes) — Vercel picks this up automatically on deploy.
+   cron (once daily — a Hobby-plan limitation; it's a backstop, not the
+   primary release path) — Vercel picks this up automatically on deploy.
 5. Add the deployed webhook URL
    (`https://jgpfootwear.store/api/webhooks/stripe`) in the Stripe
    dashboard once live, and copy that endpoint's signing secret into

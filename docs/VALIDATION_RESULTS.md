@@ -20,19 +20,58 @@ Evidence (counts, output excerpt — no secrets):
 
 ## Inventory concurrency (`tests/integration/inventory-concurrency.test.ts`)
 
-Not yet run — requires `DATABASE_URL` pointed at a real Postgres (see
-`docs/NEON_SETUP.md`). Run with:
-```bash
-npm run test:commerce
+```text
+Date/time: 2026-09-04
+Environment: staging (Neon project jgp-staging via Vercel-managed integration,
+             connected to jgp-commerce Vercel project)
+Command run: npm run test:commerce
+Result: PASS
+Evidence: ON_HAND=1 concurrent-reservation test — exactly one of two
+          simultaneous attempts succeeded, reserved never exceeded 1,
+          available never went negative. Release-then-reserve-then-commit
+          test — ended at ON_HAND=0/RESERVED=0, exactly one SALE
+          InventoryTransaction, one Order, one Payment.
 ```
+
+**Defect found and fixed during this run**: Prisma's default 5000ms
+interactive-transaction timeout was too tight for the webhook's
+multi-step transaction against real (non-local) Neon latency — a genuine
+latent production bug, not a test artifact. Fixed by adding explicit
+`{ timeout: 15000-30000 }` to every multi-step `$transaction` call in the
+checkout/webhook/returns/product-creation paths (see commit history).
+First run also surfaced a test-fixture bug (a hardcoded, non-unique
+`InventoryLocation.name` in two test files colliding with leftover data
+from an earlier failed run) — fixed by timestamping those names to match
+the already-timestamped `code` field.
 
 ## Webhook idempotency (`tests/integration/webhook-idempotency.test.ts`)
 
-Not yet run — same blocker as above.
+```text
+Date/time: 2026-09-04
+Environment: staging (same as above)
+Command run: npm run test:commerce
+Result: PASS
+Evidence: Invalid signature rejected (400). Duplicate event replay: +0
+          orders, +0 payments, +0 inventory decrement (started at 5,
+          ended at 4 — decremented exactly once across both the original
+          and replayed delivery). Unpaid checkout.session.completed
+          (delayed-payment scenario): 0 orders created, reservation
+          stayed ACTIVE.
+```
 
 ## Refund concurrency (`tests/integration/refund-concurrency.test.ts`)
 
-Not yet run — same blocker as above.
+```text
+Date/time: 2026-09-04
+Environment: staging (same as above)
+Command run: npm run test:commerce
+Result: PASS
+Evidence: Two simultaneous full-amount refund attempts on the same order
+          — exactly one succeeded, total refunded equals the order total
+          exactly once (not double).
+```
+
+Full suite (`npx vitest run`, unit + integration together): **14/14 passed, 0 skipped** — the first time this repository has run with zero tests skipped for lack of infrastructure.
 
 ## Stripe test-mode purchase
 

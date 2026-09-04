@@ -55,6 +55,15 @@ export async function POST(req: NextRequest) {
     // Reserve stock for every line first, inside one transaction — if any
     // line can't be held, nothing is held and the customer gets a real
     // "out of stock" answer before Stripe is ever involved.
+    //
+    // Extended timeout: this loops once per cart line, and each
+    // reserveInventory() call is itself a multi-step operation (variant
+    // lookup, per-location raw guarded UPDATE, reservation + audit-row
+    // creation) — a multi-item cart can easily exceed Prisma's 5000ms
+    // default against a real remote database. Discovered as a genuine
+    // timeout in tests/integration/webhook-idempotency.test.ts against
+    // live Neon Postgres (same root cause as the webhook transaction
+    // below), not a hypothetical.
     const lineData = await prisma.$transaction(async (tx) => {
       const lines = [];
       for (const item of items) {
@@ -94,7 +103,7 @@ export async function POST(req: NextRequest) {
         });
       }
       return lines;
-    });
+    }, { timeout: 15000 });
 
     // Server-computed subtotal drives the shipping quote — never trust a
     // client-submitted amount here. Tax is handled entirely by Stripe Tax
@@ -130,7 +139,7 @@ export async function POST(req: NextRequest) {
     // step itself threw) — give the held stock back rather than leaving it
     // stranded until the expiry cron catches it.
     await prisma
-      .$transaction((tx) => releaseReservationsForAttempt(tx, checkoutAttemptId))
+      .$transaction((tx) => releaseReservationsForAttempt(tx, checkoutAttemptId), { timeout: 15000 })
       .catch((releaseErr) => console.error("[checkout] failed to release reservations", releaseErr));
 
     const message = err instanceof CheckoutError ? err.message : err.message || "Something went wrong.";

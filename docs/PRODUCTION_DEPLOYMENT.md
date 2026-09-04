@@ -58,10 +58,14 @@ never be able to touch real customer data or real inventory counts.
    Vercel — this is a *different* secret from whatever `stripe listen`
    gave you locally.
 10. **Cron**: `vercel.json` declares `/api/cron/release-reservations`
-    (every 5 minutes) — Vercel wires this up automatically on deploy to a
-    production domain; it does not run for Preview deployments. Confirm
-    `CRON_SECRET` is set in Production env vars, or the route will 401
-    itself (safe failure, but reservations won't get released until fixed).
+    (once daily — Vercel's Hobby plan rejects any cron more frequent than
+    that; this is only the backstop sweep, not the primary release path,
+    see the route's header comment) — Vercel wires this up automatically
+    on deploy to a production domain; it does not run for Preview
+    deployments. Confirm `CRON_SECRET` is set in Production env vars, or
+    the route will 401 itself (safe failure, but reservations won't get
+    released until fixed). On a Pro plan, tighten the schedule in
+    `vercel.json` back to every few minutes.
 
 ## Every subsequent deploy
 

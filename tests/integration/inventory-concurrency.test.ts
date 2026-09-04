@@ -31,7 +31,7 @@ beforeAll(async () => {
   productId = product.id;
 
   const location = await prisma.inventoryLocation.create({
-    data: { code: `TEST-${Date.now()}`, name: "Test Location" }
+    data: { code: `TEST-${Date.now()}`, name: `Test Location ${Date.now()}` }
   });
   locationId = location.id;
 
