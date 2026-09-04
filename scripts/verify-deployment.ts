@@ -22,10 +22,22 @@ if (!url) {
 
 type Check = { name: string; run: () => Promise<{ ok: boolean; detail: string }> };
 
-async function fetchStatus(path: string): Promise<{ status: number; text: string; headers: Headers }> {
-  const res = await fetch(new URL(path, url), { redirect: "manual" });
-  const text = await res.text().catch(() => "");
-  return { status: res.status, text, headers: res.headers };
+// Vercel's "Deployment Protection" (auto-enabled SSO gate on Preview
+// deployments) intercepts every request at the platform level with a 302
+// to a vercel.com auth page — indistinguishable from a real app failure
+// by status code alone unless you know to look at the Location header.
+// Detected here so a protected deployment reports one clear message
+// instead of every single check failing with a confusing 302.
+const bypassToken = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+
+async function fetchStatus(path: string): Promise<{ status: number; text: string; headers: Headers; protected: boolean }> {
+  const target = new URL(path, url);
+  if (bypassToken) target.searchParams.set("x-vercel-protection-bypass", bypassToken);
+  const res = await fetch(target, { redirect: "manual" });
+  const location = res.headers.get("location") ?? "";
+  const isProtectionRedirect = res.status >= 300 && res.status < 400 && /vercel\.com\/(sso-)?api|\/api\/vercel-sso/.test(location);
+  const text = isProtectionRedirect ? "" : await res.text().catch(() => "");
+  return { status: res.status, text, headers: res.headers, protected: isProtectionRedirect };
 }
 
 const commonChecks: Check[] = [
@@ -105,6 +117,19 @@ const productionOnlyChecks: Check[] = [
 
 async function main() {
   console.log(`\nVerifying ${mode} deployment: ${url}\n`);
+
+  const probe = await fetchStatus("/");
+  if (probe.protected && !bypassToken) {
+    console.error(
+      "This deployment is behind Vercel Deployment Protection (SSO gate on Preview deployments by default).\n" +
+        "Every check below would fail with a confusing 302, not because the app is broken.\n\n" +
+        "Fix: Project Settings -> Deployment Protection -> \"Protection Bypass for Automation\" -> generate a secret,\n" +
+        "then re-run with:\n" +
+        `  VERCEL_AUTOMATION_BYPASS_SECRET=<secret> STAGING_URL=${url} npm run verify:${mode}\n`
+    );
+    process.exit(1);
+  }
+
   const checks = mode === "production" ? [...commonChecks, ...productionOnlyChecks] : commonChecks;
 
   let failures = 0;
