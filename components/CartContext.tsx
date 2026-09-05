@@ -18,7 +18,20 @@ const STORAGE_KEY = "jgp-cart-v1";
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
-  const hydrated = useRef(false);
+  // Guards the write-effect below against firing with the initial (empty)
+  // `lines` before hydration's setLines has actually been applied. Both
+  // effects run once on mount regardless of dependency arrays, in
+  // declaration order, in the SAME commit — so on mount, this write-effect
+  // runs with the stale pre-hydration `lines` closure, not the value
+  // hydration just read. A ref-based "hydrated" flag mutated synchronously
+  // inside the hydrate effect does NOT fix this: it's already true by the
+  // time this effect runs in that same commit, so it would write `[]` over
+  // real localStorage data on every full page load, before the re-render
+  // triggered by hydration's setLines gets a chance to write the real data
+  // back. Skipping exactly one write (the mount one) sidesteps this
+  // without depending on effect/render timing. This was a real,
+  // reproduced bug: the cart was being wiped on every hard navigation.
+  const skipNextWrite = useRef(true);
 
   // Client-side-only cart persistence via localStorage. Fine for a guest
   // cart; a logged-in customer's cart additionally syncs to the DB (see
@@ -42,11 +55,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore corrupt/unavailable storage
     }
-    hydrated.current = true;
   }, []);
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (skipNextWrite.current) {
+      skipNextWrite.current = false;
+      return;
+    }
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
     } catch {

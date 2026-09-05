@@ -21,7 +21,7 @@ export default async function ShopPage() {
       <div className="container">
         <div className="eyebrow">The Collection</div>
         <h1 style={{ fontSize: 40 }}>Every pair is built for support.</h1>
-        <div className="grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginTop: 32 }}>
+        <div className="product-grid-3" style={{ marginTop: 32 }}>
           {products.map((p) => {
             const prices = p.variants.map((v) => v.priceCents);
             const minPrice = prices.length ? Math.min(...prices) : 0;

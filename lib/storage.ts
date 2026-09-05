@@ -2,14 +2,19 @@
 // touch the @vercel/blob SDK directly. If a different provider is ever
 // needed (S3-compatible, etc.), only this file changes.
 import { put, del } from "@vercel/blob";
+import { appEnv } from "@/lib/env";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export class StorageError extends Error {}
 
+// Keyed on appEnv() rather than raw NODE_ENV — see lib/rate-limit.ts for
+// why (Vercel sets NODE_ENV=production on every deployed build, Preview
+// included, so a raw NODE_ENV check would also hard-fail a staging/demo
+// deployment that never claimed to have Blob configured).
 export function assertStorageConfigured(): void {
-  if (process.env.NODE_ENV === "production" && !process.env.BLOB_READ_WRITE_TOKEN) {
+  if (appEnv() === "production" && !process.env.BLOB_READ_WRITE_TOKEN) {
     throw new StorageError("Object storage is not configured for production: set BLOB_READ_WRITE_TOKEN (Vercel Blob).");
   }
 }

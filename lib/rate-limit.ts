@@ -13,6 +13,7 @@
 // than one that fails loudly before ever accepting traffic.
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { appEnv } from "@/lib/env";
 
 type Limiter = { allowed: boolean; retryAfterMs?: number };
 
@@ -62,14 +63,23 @@ function getUpstashLimiter(scope: string, limit: number, windowMs: number): Rate
 }
 
 /**
- * Production fails closed: if Redis isn't configured in a production
+ * Production fails closed: if Redis isn't configured in a REAL production
  * deployment, this throws rather than silently limiting per-process
  * (which is not meaningfully "rate limited" at all across multiple
  * serverless instances). Call this at the top of any route that MUST be
  * rate-limited in production before falling through to checkRateLimit().
+ *
+ * Deliberately keyed on appEnv(), not raw NODE_ENV — Vercel sets
+ * NODE_ENV=production for every deployed build, Preview included, so a
+ * NODE_ENV check alone would also hard-fail staging/demo Preview
+ * deployments (which is exactly what happened here — checkout,
+ * registration, and login were all 500ing on the staging MVP purely
+ * because Upstash isn't provisioned yet, discovered building the client
+ * demo, not a hypothetical). appEnv() uses VERCEL_ENV to tell a real
+ * Production deployment apart from a Preview one.
  */
 export function assertRateLimiterConfigured(): void {
-  if (process.env.NODE_ENV === "production" && !getRedis()) {
+  if (appEnv() === "production" && !getRedis()) {
     throw new Error(
       "Rate limiting is not configured for production: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN. " +
         "Refusing to silently fall back to an in-memory limiter, which does not work correctly across serverless instances."

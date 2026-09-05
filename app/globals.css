@@ -76,6 +76,18 @@ p { line-height: 1.6; color: var(--ink-soft); }
   gap: 32px;
 }
 
+/* Grid items default to a min-width of "auto" (their content's min-content
+   size), not 0 — so a text/flex child wider than its track's fair share
+   blows out the whole grid (and the page) sideways instead of wrapping.
+   Reset it here once for every grid on the site rather than chasing it
+   down per page. Reproduced at 768px on the product detail page before
+   this fix — the purchase panel column pushed ~40px past the viewport. */
+.product-detail-grid > *,
+.product-grid-3 > *,
+.grid > * {
+  min-width: 0;
+}
+
 .card {
   background: var(--white);
   border: 1px solid var(--bone-dim);
@@ -115,7 +127,30 @@ p { line-height: 1.6; color: var(--ink-soft); }
 .footer a { color: var(--bone); opacity: 0.8; }
 .footer a:hover { opacity: 1; }
 
+.product-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+}
+
+.product-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
 @media (max-width: 720px) {
   .nav-links { display: none; }
   .section { padding: 56px 0; }
+  /* Below this width, a fixed 2- or 3-column grid squeezes product
+     images and the whole purchase panel (price, size picker, Add to
+     Cart) into an unusably narrow column — stack instead. */
+  .product-detail-grid { grid-template-columns: 1fr; gap: 32px; }
+  .product-grid-3 { grid-template-columns: 1fr; }
+  /* .grid is reused across the site with a per-page inline
+     grid-template-columns (2/3/4 columns) and no responsive override —
+     !important is needed here to beat that inline style, which is the
+     narrowest way to make every existing multi-column grid stack on
+     mobile without touching each page individually. */
+  .grid { grid-template-columns: 1fr !important; }
 }

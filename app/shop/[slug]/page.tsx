@@ -53,7 +53,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="section">
-      <div className="container" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 56 }}>
+      <div className="container product-detail-grid">
         <div style={{ aspectRatio: "1", background: "var(--bone-dim)", borderRadius: 2 }} />
         <div>
           <div className="eyebrow">
@@ -89,7 +89,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       {related.length > 0 && (
         <div className="container" style={{ marginTop: 64 }}>
           <div className="eyebrow">You Might Also Like</div>
-          <div className="grid" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginTop: 16 }}>
+          <div className="product-grid-3" style={{ marginTop: 16 }}>
             {related.map((p) => (
               <Link key={p.slug} href={`/shop/${p.slug}`} className="card">
                 <div style={{ aspectRatio: "1", background: "var(--bone-dim)" }} />

@@ -50,13 +50,16 @@ async function main() {
   });
 
   // ── Product: W852, Black/Navy, three sizes with distinct stock states ──
+  // Description is genuinely customer-facing (this product renders on the
+  // live storefront) — never reference "staging"/"fixture"/"test" here.
+  const description = "The signature JGP silhouette in Black/Navy. Biomechanics-informed design, handcrafted in Korea.";
   const product = await prisma.product.upsert({
     where: { slug: "w852" },
-    update: { status: ProductStatus.ACTIVE },
+    update: { status: ProductStatus.ACTIVE, description },
     create: {
       slug: "w852",
       name: "W852",
-      description: "Staging fixture product — signature JGP silhouette, Black/Navy.",
+      description,
       category: "Sneaker",
       gender: "Women's",
       status: ProductStatus.ACTIVE

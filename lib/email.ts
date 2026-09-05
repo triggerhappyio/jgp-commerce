@@ -10,6 +10,7 @@
 // after the transaction commits, its result is logged, and it is never
 // awaited inside the same transaction as the financial write.
 import { Resend } from "resend";
+import { appEnv } from "@/lib/env";
 
 export type EmailMessage = {
   to: string;
@@ -36,7 +37,7 @@ function getResend(): Resend | null {
  * treat email as best-effort and don't.
  */
 export function assertEmailProviderConfigured(): void {
-  if (process.env.NODE_ENV === "production" && (!getResend() || !process.env.EMAIL_FROM)) {
+  if (appEnv() === "production" && (!getResend() || !process.env.EMAIL_FROM)) {
     throw new Error("Email is not configured for production: set RESEND_API_KEY and EMAIL_FROM.");
   }
 }
@@ -46,7 +47,7 @@ export async function sendEmail(message: EmailMessage): Promise<{ sent: boolean;
   const from = process.env.EMAIL_FROM;
 
   if (!resend || !from) {
-    if (process.env.NODE_ENV !== "production") {
+    if (appEnv() !== "production") {
       console.log(`[email] (dev, no provider configured) would send to ${message.to}: "${message.subject}"`);
       return { sent: false };
     }

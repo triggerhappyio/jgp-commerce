@@ -22,20 +22,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many checkout attempts. Try again shortly." }, { status: 429 });
   }
 
+  // Customer-facing messages here are deliberately generic — never an env
+  // var name or internal setup instruction (app/checkout/page.tsx already
+  // hides the checkout button entirely when Stripe isn't configured, so a
+  // normal visitor never reaches this branch; this is the safety net for
+  // someone hitting the API directly). The specific cause still goes to
+  // the server log for whoever's operating the deployment.
   if (!process.env.STRIPE_SECRET_KEY) {
-    return NextResponse.json(
-      { error: "Stripe is not configured yet. Add STRIPE_SECRET_KEY to your environment." },
-      { status: 500 }
-    );
+    console.error("[checkout] STRIPE_SECRET_KEY is not set — checkout is disabled.");
+    return NextResponse.json({ error: "Checkout isn't available right now. Please try again later." }, { status: 503 });
   }
   if (!process.env.DATABASE_URL) {
-    return NextResponse.json(
-      {
-        error:
-          "Catalog database is not configured yet. Add DATABASE_URL, run `npx prisma migrate dev`, then `npm run db:seed`."
-      },
-      { status: 500 }
-    );
+    console.error("[checkout] DATABASE_URL is not set — checkout is disabled.");
+    return NextResponse.json({ error: "Checkout isn't available right now. Please try again later." }, { status: 503 });
   }
 
   const body = await req.json();
@@ -142,8 +141,15 @@ export async function POST(req: NextRequest) {
       .$transaction((tx) => releaseReservationsForAttempt(tx, checkoutAttemptId), { timeout: 15000 })
       .catch((releaseErr) => console.error("[checkout] failed to release reservations", releaseErr));
 
-    const message = err instanceof CheckoutError ? err.message : err.message || "Something went wrong.";
-    return NextResponse.json({ error: message }, { status: err instanceof CheckoutError ? 409 : 500 });
+    // Only CheckoutError carries a message written to be shown to a
+    // customer (stock/quantity issues). Anything else is an unexpected
+    // failure (Prisma, Stripe, network) whose raw message could contain
+    // internal details — log it, show a generic message.
+    if (err instanceof CheckoutError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
+    }
+    console.error("[checkout] unexpected error:", err);
+    return NextResponse.json({ error: "Something went wrong starting checkout. Please try again." }, { status: 500 });
   }
 }
 
