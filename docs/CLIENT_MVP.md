@@ -18,23 +18,39 @@ intentionally disabled — see below — everything else is fully live.
 `staging`)**:
 `https://jgp-commerce-git-staging-lebal-os-s-projects.vercel.app`
 
-This URL sits behind Vercel's Deployment Protection (SSO). Anyone without
-a Vercel account on this team who needs to view it will get an
-auth-gated page instead of the site. Two options, in order of
-preference:
+This URL sits behind Vercel's Deployment Protection (SSO). A client
+without a Vercel account on this team gets an auth-gated page instead of
+the site unless given one of:
 
-1. **Add them as a Vercel team member** (Viewer role is enough) — they
-   sign in with any account and see the live site normally.
-2. **Generate a "Protection Bypass for Automation" secret** in Vercel
-   Project Settings → Deployment Protection, then share a link of the
-   form `https://<url>/?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=true`
-   — this sets a cookie in their browser on first visit and they can
-   browse normally after. Do not commit this secret anywhere; treat it
-   like any other credential.
+1. **A bypass link** (set up for this demo — see below): visiting it once
+   sets a cookie in their browser, after which they browse the site
+   normally, no Vercel account needed. This is what to send the client.
+2. **Vercel team membership** (Viewer role) — an alternative if they'd
+   rather sign in with their own account instead of using a link.
 
-Neither option was set up during this pass — this is a decision for
-whoever is actually sending the link (it determines whether the viewer
-needs a Vercel account or just a one-time link).
+The bypass link uses a "Protection Bypass for Automation" secret
+(`vercel project protection enable jgp-commerce --protection-bypass`),
+which is shareable by design — its only capability is viewing this
+staging deployment — but still treat it like a credential: don't post it
+anywhere public, and regenerate it (disable, then re-enable, which
+issues a new value) if it's ever shared more widely than intended.
+Retrieve the current value with:
+
+```bash
+vercel project protection jgp-commerce --json
+```
+
+— under `protectionBypass`, each key is a usable secret. Build the link
+as:
+
+```
+https://jgp-commerce-git-staging-lebal-os-s-projects.vercel.app/?x-vercel-protection-bypass=<secret>&x-vercel-set-bypass-cookie=true
+```
+
+Verified 2026-09-05: visiting this link in a fresh browser renders the
+real homepage (not an SSO gate), and the cookie persists across
+navigation to `/shop`, `/shop/w852`, `/checkout`, `/account/login`, and
+`/admin/login` without needing the query param again.
 
 ## Checkout is intentionally disabled right now
 
@@ -88,6 +104,25 @@ prints if you need fresh credentials:
 - `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` reclassified from
   required-in-development to genuinely optional, matching how the app
   actually behaves.
+
+## Click-through verification (2026-09-05, against the live bypass-linked URL)
+
+Full walkthrough run against the actual deployed staging URL (not just
+local dev), using the bypass link above: homepage → shop → product page
+→ add to cart → hard navigation to `/checkout` (cart correctly
+persisted, disabled-checkout message rendered correctly) → customer
+login/account → admin login/dashboard (real $0.00 / zero-order
+aggregations, no fake data). No dead buttons, no raw errors, no
+placeholder content encountered anywhere in this path.
+
+**Not yet verified**: an actual completed transaction through Stripe.
+`STRIPE_SECRET_KEY` isn't configured on staging, and obtaining a real
+Stripe test key needs either an existing Stripe account or creating one
+— account creation isn't something to do on someone else's behalf, so
+this is deferred until a real test key is available. Once it is, follow
+`docs/STRIPE_ACTIVATION.md` then `docs/STRIPE_TESTING.md` to run a full
+test-card purchase and confirm it produces a real Order, decrements
+inventory, and shows up on the admin dashboard.
 
 ## Known, accepted limitations of this demo
 
