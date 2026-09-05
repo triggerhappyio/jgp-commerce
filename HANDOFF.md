@@ -19,6 +19,19 @@ real payment** and has **one seed product**. It is safe to demo to a
 client; it is not yet ready to sell through. See "Must-haves before real
 launch" below for the exact gap list.
 
+## Beyond the online storefront: le bal OS
+
+"le bal" and "JGP" are the same business. `docs/LE_BAL_OS_INTEGRATION.md`
+reconciles a separate architectural memo (an internal shop-operations
+system — customer visits, foot assessments, footprint archive,
+appointments, in-store Square/Clover checkout) with this codebase. Short
+version: extend this Postgres/Prisma/Next.js stack with new operational
+models rather than standing up Supabase as a second backend — this
+schema already has more of what that memo needs than it first appears
+(a real inventory ledger, RBAC, real store locations, and an
+`Order.source` enum that already includes `RETAIL`). Read that doc before
+starting any in-store-operations work.
+
 ## Which docs to trust
 
 This repo accumulated docs across several work passes and some are stale.
